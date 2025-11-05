@@ -46,6 +46,9 @@ dependencies {
     // Logging
     implementation("io.github.microutils:kotlin-logging-jvm:3.0.5")
 
+    // Development tools
+    developmentOnly("org.springframework.boot:spring-boot-devtools")
+
     // Test dependencies
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
