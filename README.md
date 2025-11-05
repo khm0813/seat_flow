@@ -11,12 +11,14 @@ A high-concurrency, real-time seat reservation system demonstrating advanced bac
 - **Automatic Expiration**: Hold timeout handling with Redis keyspace notifications
 
 ### Technical Highlights
-- **Backend**: Kotlin + Spring WebFlux (Reactive Programming)
-- **Frontend**: SvelteKit + TypeScript
+- **Backend**: Kotlin 1.9.21 + Spring Boot 3.2.0 (WebFlux, Reactive Programming)
+- **Frontend**: SvelteKit + TypeScript + Vite
 - **Database**: PostgreSQL with R2DBC
-- **Cache & Messaging**: Redis (Distributed locks, Pub/Sub, Key expiration)
+- **Cache & Messaging**: Redis (Lettuce client, Distributed locks, Pub/Sub, Key expiration)
 - **Real-time**: WebSocket + Redis Pub/Sub
 - **Containerization**: Docker Compose
+- **Java Version**: Java 17+
+- **Node.js Version**: Node.js 18+
 
 ## 🏗️ Architecture
 
