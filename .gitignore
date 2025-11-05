@@ -1,0 +1,238 @@
+# ===========================
+# SeatFlow Project .gitignore
+# ===========================
+
+# ===============================
+# Backend (Kotlin/Spring Boot)
+# ===============================
+backend/build/
+backend/.gradle/
+backend/out/
+backend/bin/
+backend/.idea/
+backend/*.iml
+backend/*.ipr
+backend/*.iws
+backend/.settings/
+backend/.project
+backend/.classpath
+backend/.vscode/
+
+# Gradle
+backend/gradle/wrapper/gradle-wrapper.jar
+!backend/gradle/wrapper/gradle-wrapper.properties
+
+# Spring Boot
+backend/spring.log
+backend/application-local.yml
+backend/application-secret.yml
+
+# ===============================
+# Frontend (SvelteKit/Node.js)
+# ===============================
+frontend/node_modules/
+frontend/.svelte-kit/
+frontend/build/
+frontend/dist/
+frontend/.vite/
+frontend/.env
+frontend/.env.local
+frontend/.env.production
+frontend/.env.development
+frontend/package-lock.json
+
+# Logs
+frontend/npm-debug.log*
+frontend/yarn-debug.log*
+frontend/yarn-error.log*
+frontend/pnpm-debug.log*
+
+# ===============================
+# Docker & Development
+# ===============================
+# Docker volumes data
+docker-data/
+.docker/
+
+# Development databases
+*.db
+*.sqlite
+*.sqlite3
+
+# Environment files
+.env
+.env.local
+.env.development
+.env.production
+.env.test
+
+# ===============================
+# IDE & Editors
+# ===============================
+# IntelliJ IDEA
+.idea/
+*.iml
+*.ipr
+*.iws
+
+# Visual Studio Code
+.vscode/
+*.code-workspace
+
+# Eclipse
+.metadata/
+.settings/
+.project
+.classpath
+bin/
+tmp/
+*.tmp
+*.bak
+
+# Vim
+*.swp
+*.swo
+*~
+
+# Emacs
+*~
+\#*\#
+/.emacs.desktop
+/.emacs.desktop.lock
+
+# ===============================
+# Operating System
+# ===============================
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+Icon?
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+*.cab
+*.msi
+*.msm
+*.msp
+*.lnk
+
+# Linux
+*~
+.fuse_hidden*
+.directory
+.Trash-*
+
+# ===============================
+# Logs & Runtime
+# ===============================
+logs/
+*.log
+*.log.*
+log/
+
+# Runtime data
+pids/
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage reports
+coverage/
+*.lcov
+.nyc_output/
+
+# ===============================
+# Temporary & Cache Files
+# ===============================
+# Temporary files
+tmp/
+temp/
+*.tmp
+*.temp
+
+# Cache directories
+.cache/
+.parcel-cache/
+.next/
+.nuxt/
+
+# ===============================
+# Security & Secrets
+# ===============================
+# API keys and secrets
+*.key
+*.pem
+*.p12
+*.crt
+secrets/
+credentials/
+
+# Configuration with sensitive data
+config/local.yml
+config/secret.yml
+application-secret.properties
+
+# ===============================
+# Testing & QA
+# ===============================
+# Test results
+test-results/
+coverage-reports/
+allure-results/
+
+# JUnit
+TEST-*.xml
+
+# ===============================
+# Documentation Build
+# ===============================
+# Generated documentation
+docs/_build/
+docs/build/
+site/
+
+# ===============================
+# Backup & Archive Files
+# ===============================
+*.bak
+*.backup
+*.old
+*.orig
+*.rej
+*.tar
+*.tar.gz
+*.zip
+*.rar
+*.7z
+
+# ===============================
+# Package Manager Locks
+# ===============================
+# We want to ignore some lock files in development
+# but keep package.json for dependency tracking
+yarn.lock
+pnpm-lock.yaml
+
+# ===============================
+# JetBrains Specific
+# ===============================
+.idea/**/workspace.xml
+.idea/**/tasks.xml
+.idea/**/usage.statistics.xml
+.idea/**/dictionaries
+.idea/**/shelf
+.idea/**/contentModel.xml
+.idea/**/dataSources/
+.idea/**/dataSources.ids
+.idea/**/dataSources.local.xml
+.idea/**/sqlDataSources.xml
+.idea/**/dynamic.xml
+.idea/**/uiDesigner.xml
+.idea/**/dbnavigator.xml

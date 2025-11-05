@@ -1,0 +1,25 @@
+# Development Dockerfile with hot reload support
+FROM node:18-alpine
+
+WORKDIR /app
+
+# Copy package files
+COPY package.json package-lock.json* ./
+
+# Install dependencies
+RUN npm ci
+
+# Copy configuration files
+COPY vite.config.ts svelte.config.js tsconfig.json ./
+
+# Create non-root user
+RUN addgroup -g 1001 -S seatflow && \
+    adduser -S seatflow -u 1001 -G seatflow
+RUN chown -R seatflow:seatflow /app
+USER seatflow
+
+# Expose Vite dev server port
+EXPOSE 5173
+
+# Start development server with hot reload
+CMD ["npm", "run", "dev", "--", "--host", "0.0.0.0", "--port", "5173"]

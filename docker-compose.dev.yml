@@ -1,0 +1,108 @@
+version: '3.8'
+
+services:
+  # PostgreSQL Database
+  postgres:
+    image: postgres:15-alpine
+    container_name: seatflow-postgres-dev
+    environment:
+      POSTGRES_DB: seatflow
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data_dev:/var/lib/postgresql/data
+      - ./backend/src/main/resources/schema.sql:/docker-entrypoint-initdb.d/01-schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seatflow-network
+
+  # Redis for caching and pub/sub
+  redis:
+    image: redis:7-alpine
+    container_name: seatflow-redis-dev
+    ports:
+      - "6379:6379"
+    command: redis-server --notify-keyspace-events Ex
+    volumes:
+      - redis_data_dev:/data
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - seatflow-network
+
+  # Backend API with hot reload
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    container_name: seatflow-backend-dev
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+      SPRING_R2DBC_URL: r2dbc:postgresql://postgres:5432/seatflow
+      SPRING_R2DBC_USERNAME: postgres
+      SPRING_R2DBC_PASSWORD: postgres
+      SPRING_DATA_REDIS_HOST: redis
+      SPRING_DATA_REDIS_PORT: 6379
+      SPRING_DEVTOOLS_RESTART_ENABLED: true
+      SPRING_DEVTOOLS_LIVERELOAD_ENABLED: true
+    ports:
+      - "8080:8080"
+      - "35729:35729" # LiveReload port
+    volumes:
+      - ./backend/src:/app/src:ro
+      - ./backend/build.gradle.kts:/app/build.gradle.kts:ro
+      - gradle_cache:/home/gradle/.gradle
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    networks:
+      - seatflow-network
+
+  # Frontend with hot reload
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    container_name: seatflow-frontend-dev
+    ports:
+      - "5173:5173" # Vite dev server port
+    environment:
+      - VITE_API_URL=http://localhost:8080
+      - VITE_WS_URL=ws://localhost:8080
+    volumes:
+      - ./frontend/src:/app/src:cached
+      - ./frontend/package.json:/app/package.json:ro
+      - ./frontend/package-lock.json:/app/package-lock.json:ro
+      - ./frontend/vite.config.ts:/app/vite.config.ts:ro
+      - ./frontend/svelte.config.js:/app/svelte.config.js:ro
+      - ./frontend/tsconfig.json:/app/tsconfig.json:ro
+      - node_modules_cache:/app/node_modules
+    depends_on:
+      - backend
+    networks:
+      - seatflow-network
+
+volumes:
+  postgres_data_dev:
+    driver: local
+  redis_data_dev:
+    driver: local
+  gradle_cache:
+    driver: local
+  node_modules_cache:
+    driver: local
+
+networks:
+  seatflow-network:
+    driver: bridge
