@@ -148,9 +148,9 @@ class RedisLockManagerTest(
         val combined = Mono.zip(lock1, lock2, lock3)
 
         StepVerifier.create(combined)
-            .expectNextMatches { (result1, result2, result3) ->
+            .expectNextMatches { tuple ->
                 // Only one should succeed, others should be AlreadyLocked
-                val results = listOf(result1, result2, result3)
+                val results = listOf(tuple.t1, tuple.t2, tuple.t3)
                 val successCount = results.count { it is LockResult.Success }
                 val alreadyLockedCount = results.count { it is LockResult.AlreadyLocked }
 

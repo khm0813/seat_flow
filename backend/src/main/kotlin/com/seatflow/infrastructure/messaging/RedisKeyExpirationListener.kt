@@ -9,8 +9,9 @@ import org.springframework.data.redis.listener.ReactiveRedisMessageListenerConta
 import org.springframework.stereotype.Component
 import reactor.core.publisher.Flux
 import reactor.core.publisher.Mono
-import javax.annotation.PostConstruct
-import javax.annotation.PreDestroy
+import reactor.core.Disposable
+import jakarta.annotation.PostConstruct
+import jakarta.annotation.PreDestroy
 
 @Component
 class RedisKeyExpirationListener(
@@ -20,6 +21,7 @@ class RedisKeyExpirationListener(
 ) {
     private val logger = KotlinLogging.logger {}
     private lateinit var listenerContainer: ReactiveRedisMessageListenerContainer
+    private var subscription: Disposable? = null
 
     companion object {
         private const val LOCK_PREFIX = "lock:seat:"
@@ -33,7 +35,7 @@ class RedisKeyExpirationListener(
         // Listen for key expiration events
         val messages = listenerContainer.receive(EXPIRATION_PATTERN)
 
-        messages
+        subscription = messages
             .filter { message ->
                 val key = message.message
                 key.startsWith(LOCK_PREFIX)
@@ -47,16 +49,13 @@ class RedisKeyExpirationListener(
             }
             .subscribe()
 
-        listenerContainer.start()
         logger.info { "Redis key expiration listener started" }
     }
 
     @PreDestroy
     fun destroy() {
-        if (::listenerContainer.isInitialized) {
-            listenerContainer.stop()
-            logger.info { "Redis key expiration listener stopped" }
-        }
+        subscription?.dispose()
+        logger.info { "Redis key expiration listener stopped" }
     }
 
     private fun handleLockExpiration(expiredKey: String): Mono<Void> {

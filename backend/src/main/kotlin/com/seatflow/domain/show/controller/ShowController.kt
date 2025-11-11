@@ -23,12 +23,13 @@ class ShowController(
             .map { response ->
                 ApiResponse.success(response)
             }
-            .onErrorReturn { error ->
-                logger.error(error) { "Failed to get show seats for ID: $id" }
-                when (error) {
+            .onErrorResume { error ->
+                logger.error(error as Throwable) { "Failed to get show seats for ID: $id" }
+                val response: ApiResponse<ShowSeatsResponse> = when (error) {
                     is NoSuchElementException -> ApiResponse.error("Show not found")
                     else -> ApiResponse.error("Internal server error")
                 }
+                Mono.just(response)
             }
             .doOnSuccess { response ->
                 if (response.success) {

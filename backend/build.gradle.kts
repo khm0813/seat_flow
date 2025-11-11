@@ -37,9 +37,6 @@ dependencies {
     implementation("org.jetbrains.kotlin:kotlin-reflect")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-reactor")
 
-    // WebSocket support
-    implementation("org.springframework.boot:spring-boot-starter-websocket")
-
     // Validation
     implementation("org.springframework.boot:spring-boot-starter-validation")
 

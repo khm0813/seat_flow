@@ -1,5 +1,5 @@
 # Build stage
-FROM openjdk:17-jdk-slim as builder
+FROM eclipse-temurin:17-jdk-jammy as builder
 
 WORKDIR /app
 
@@ -12,7 +12,7 @@ COPY settings.gradle.kts .
 # Make gradlew executable
 RUN chmod +x ./gradlew
 
-# Download dependencies
+# Download dependencies (run as root, it's just the build stage)
 RUN ./gradlew dependencies --no-daemon
 
 # Copy source code
@@ -22,7 +22,7 @@ COPY src src
 RUN ./gradlew build -x test --no-daemon
 
 # Runtime stage
-FROM openjdk:17-jre-slim
+FROM eclipse-temurin:17-jre-jammy
 
 WORKDIR /app
 
@@ -32,8 +32,8 @@ RUN apt-get update && apt-get install -y curl && rm -rf /var/lib/apt/lists/*
 # Copy the built JAR from builder stage
 COPY --from=builder /app/build/libs/*.jar app.jar
 
-# Create non-root user
-RUN groupadd -r seatflow && useradd -r -g seatflow seatflow
+# Create non-root user with home directory
+RUN groupadd -r seatflow && useradd -r -m -g seatflow seatflow
 RUN chown -R seatflow:seatflow /app
 USER seatflow
 

@@ -36,18 +36,18 @@ class IdempotencyService(
                     // Key already exists, get the stored result
                     redisTemplate.opsForValue()
                         .get(key)
-                        .map { storedResult ->
+                        .flatMap { storedResult ->
                             logger.debug { "Duplicate request detected for key: $key" }
-                            IdempotencyResult.DuplicateRequest(key, storedResult)
+                            Mono.just<IdempotencyResult>(IdempotencyResult.DuplicateRequest(key, storedResult))
                         }
                         .switchIfEmpty(
-                            Mono.just(IdempotencyResult.Error(key, "Failed to retrieve stored result"))
+                            Mono.just<IdempotencyResult>(IdempotencyResult.Error(key, "Failed to retrieve stored result"))
                         )
                 }
             }
-            .onErrorReturn { error ->
-                logger.error(error) { "Error checking idempotency key: $key" }
-                IdempotencyResult.Error(key, error.message ?: "Unknown error")
+            .onErrorResume { error ->
+                logger.error(error as Throwable) { "Error checking idempotency key: $key" }
+                Mono.just(IdempotencyResult.Error(key, error.message ?: "Unknown error"))
             }
     }
 
@@ -55,7 +55,8 @@ class IdempotencyService(
         val key = generateIdempotencyKey(idempotencyKey)
         return redisTemplate.opsForValue()
             .get(key)
-            .onErrorReturn(null)
+            .map<String?> { it }
+            .onErrorResume { Mono.empty() }
     }
 
     fun removeIdempotencyKey(idempotencyKey: String): Mono<Boolean> {

@@ -30,14 +30,15 @@ class ReservationController(
                 logger.info { "Successfully held seat ${request.seatId} for user ${request.userId}" }
                 ApiResponse.success(response)
             }
-            .onErrorReturn { error ->
-                logger.error(error) { "Failed to hold seat ${request.seatId} for user ${request.userId}" }
-                when (error) {
+            .onErrorResume { error ->
+                logger.error(error as Throwable) { "Failed to hold seat ${request.seatId} for user ${request.userId}" }
+                val response: ApiResponse<HoldSeatResponse> = when (error) {
                     is NoSuchElementException -> ApiResponse.error("Seat not found")
                     is IllegalStateException -> ApiResponse.error(error.message ?: "Seat not available")
                     is RuntimeException -> ApiResponse.error(error.message ?: "Failed to hold seat")
                     else -> ApiResponse.error("Internal server error")
                 }
+                Mono.just(response)
             }
     }
 
@@ -53,14 +54,15 @@ class ReservationController(
                 logger.info { "Successfully confirmed reservation $reservationId" }
                 ApiResponse.success(response)
             }
-            .onErrorReturn { error ->
-                logger.error(error) { "Failed to confirm reservation $reservationId" }
-                when (error) {
+            .onErrorResume { error ->
+                logger.error(error as Throwable) { "Failed to confirm reservation $reservationId" }
+                val response: ApiResponse<ConfirmReservationResponse> = when (error) {
                     is NoSuchElementException -> ApiResponse.error("Reservation not found")
                     is IllegalStateException -> ApiResponse.error(error.message ?: "Cannot confirm reservation")
                     is RuntimeException -> ApiResponse.error(error.message ?: "Failed to confirm reservation")
                     else -> ApiResponse.error("Internal server error")
                 }
+                Mono.just(response)
             }
     }
 }

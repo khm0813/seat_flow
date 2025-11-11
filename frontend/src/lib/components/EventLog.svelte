@@ -114,27 +114,6 @@
     background-color: #f0f0f0;
   }
 
-  /* Highlight different types of messages with colors */
-  .event:has-text("✅") {
-    color: #2e7d32;
-  }
-
-  .event:has-text("❌") {
-    color: #d32f2f;
-  }
-
-  .event:has-text("Successfully") {
-    color: #2e7d32;
-  }
-
-  .event:has-text("Failed") {
-    color: #d32f2f;
-  }
-
-  .event:has-text("Error") {
-    color: #d32f2f;
-  }
-
   @keyframes highlight {
     from {
       background-color: #e8f5e8;

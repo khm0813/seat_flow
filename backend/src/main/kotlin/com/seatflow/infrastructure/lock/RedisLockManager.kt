@@ -47,9 +47,9 @@ class RedisLockManager(
                     LockResult.AlreadyLocked(lockKey)
                 }
             }
-            .onErrorReturn { error ->
-                logger.error(error) { "Error acquiring lock for key: $lockKey" }
-                LockResult.Error(lockKey, error.message ?: "Unknown error")
+            .onErrorResume { error ->
+                logger.error(error as Throwable) { "Error acquiring lock for key: $lockKey" }
+                Mono.just(LockResult.Error(lockKey, error.message ?: "Unknown error"))
             }
     }
 
@@ -67,9 +67,9 @@ class RedisLockManager(
                 }
                 success
             }
-            .onErrorReturn { error ->
-                logger.error(error) { "Error releasing lock for key: $lockKey" }
-                false
+            .onErrorResume { error ->
+                logger.error(error as Throwable) { "Error releasing lock for key: $lockKey" }
+                Mono.just(false)
             }
     }
 
@@ -98,9 +98,9 @@ class RedisLockManager(
                 }
                 success
             }
-            .onErrorReturn { error ->
-                logger.error(error) { "Error extending lock for key: $lockKey" }
-                false
+            .onErrorResume { error ->
+                logger.error(error as Throwable) { "Error extending lock for key: $lockKey" }
+                Mono.just(false)
             }
     }
 
@@ -116,10 +116,12 @@ class RedisLockManager(
         return redisTemplate.opsForValue()
             .get(lockKey)
             .zipWith(redisTemplate.getExpire(lockKey))
-            .map { (fencingToken, ttl) ->
+            .map { tuple ->
+                val fencingToken = tuple.t1
+                val ttl = tuple.t2
                 LockInfo(lockKey, fencingToken, ttl.seconds)
             }
-            .onErrorReturn(null)
+            .onErrorResume { Mono.empty() }
     }
 
     private fun generateLockKey(showId: Long, seatId: String): String {

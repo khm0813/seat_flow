@@ -27,6 +27,7 @@ class ReservationServiceTest {
     private val seatInventoryRepository = mockk<SeatInventoryRepository>()
     private val redisLockManager = mockk<RedisLockManager>()
     private val idempotencyService = mockk<IdempotencyService>()
+    private val seatStatusPublisher = mockk<com.seatflow.infrastructure.messaging.SeatStatusPublisher>(relaxed = true)
     private val objectMapper = ObjectMapper()
 
     private val reservationService = ReservationService(
@@ -34,6 +35,7 @@ class ReservationServiceTest {
         seatInventoryRepository,
         redisLockManager,
         idempotencyService,
+        seatStatusPublisher,
         objectMapper
     )
 
@@ -172,20 +174,34 @@ class ReservationServiceTest {
         )
         val confirmedReservation = reservation.copy(status = ReservationStatus.CONFIRMED)
 
+        // Initial idempotency check
         every { idempotencyService.checkAndSetIdempotencyKey(idempotencyKey, "PROCESSING", 60) } returns
                 Mono.just(IdempotencyResult.FirstRequest("key"))
-        every { reservationRepository.findById(reservationId) } returns Mono.just(reservation)
+
+        // First findById - get the reservation
+        every { reservationRepository.findById(reservationId) } returnsMany listOf(
+            Mono.just(reservation),
+            Mono.just(confirmedReservation)  // Second call after update
+        )
+
+        // Update reservation status
         every { reservationRepository.updateStatus(reservationId, ReservationStatus.CONFIRMED) } returns Mono.just(1)
+
+        // FindById called twice: once for update, once for response
         every { seatInventoryRepository.findById(1L) } returns Mono.just(seatInventory)
+
+        // Update seat status
         every { seatInventoryRepository.updateSeatStatus(1L, "A1", SeatStatus.CONFIRMED) } returns Mono.just(1)
-        every { reservationRepository.findById(reservationId) } returns Mono.just(confirmedReservation)
-        every { idempotencyService.checkAndSetIdempotencyKey(idempotencyKey, any()) } returns
+
+        // Final idempotency cache update with JSON response
+        every { idempotencyService.checkAndSetIdempotencyKey(eq(idempotencyKey), any()) } returns
                 Mono.just(IdempotencyResult.FirstRequest("key"))
 
         StepVerifier.create(reservationService.confirmReservation(reservationId, idempotencyKey))
             .expectNextMatches { response ->
                 response.reservationId == reservationId &&
-                        response.status == ReservationStatus.CONFIRMED
+                        response.status == ReservationStatus.CONFIRMED &&
+                        response.seatId == "A1"
             }
             .verifyComplete()
     }
