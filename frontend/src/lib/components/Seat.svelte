@@ -107,9 +107,9 @@
     box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
   }
 
-  .seat-id { font-size: 11px; line-height: 1; }
+  .seat-id { font-size: clamp(9px, calc(var(--seat-size, 40px) * 0.28), 12px); line-height: 1; }
 
-  .seat-price { font-size: 8px; line-height: 1; color: var(--color-muted); font-weight: 600; }
+  .seat-price { font-size: clamp(7px, calc(var(--seat-size, 40px) * 0.2), 9px); line-height: 1; color: var(--color-muted); font-weight: 600; }
 
   .hold-countdown {
     position: absolute;

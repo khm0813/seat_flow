@@ -15,7 +15,7 @@
   // Responsive seat sizing to keep rows within container
   let container: HTMLDivElement;
   let seatSize = 40; // default max size
-  const minSeatSize = 26;
+  const minSeatSize = 18; // not enforced to avoid horizontal scroll
   const seatGap = 2; // matches CSS
   const rowLabelWidth = 24; // matches CSS
 
@@ -35,7 +35,8 @@
     const available = innerWidth - labelsSpace;
     const totalGap = (maxSeatsPerRow - 1) * seatGap;
     const size = Math.floor((available - totalGap) / maxSeatsPerRow);
-    seatSize = Math.max(minSeatSize, Math.min(40, size));
+    // Fit to one screen: never exceed 40, allow smaller than min if needed
+    seatSize = Math.min(40, size);
   }
 
   let resizeObs: ResizeObserver;
@@ -75,8 +76,13 @@
     </div>
 
     {#if $selectedSeats.length > 0}
-      <div class="selection-info">
-        <p>Selected seats: {$selectedSeats.join(', ')}</p>
+      <div class="selection-bar">
+        <span class="selection-label"><span class="sel-dot"></span>Selected ({$selectedSeats.length})</span>
+        <div class="selection-chips">
+          {#each $selectedSeats as id}
+            <span class="chip">{id}</span>
+          {/each}
+        </div>
       </div>
     {/if}
 
@@ -98,22 +104,12 @@
       {/each}
     </div>
 
-    <div class="legend">
-      <div class="legend-item">
-        <div class="legend-seat available"></div>
-        <span>Available</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-seat hold"></div>
-        <span>On Hold</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-seat confirmed"></div>
-        <span>Confirmed</span>
-      </div>
-      <div class="legend-item">
-        <div class="legend-seat selected"></div>
-        <span>Selected</span>
+    <div class="legend-card">
+      <div class="legend-items">
+        <div class="legend-item"><span class="legend-dot available"></span><span>Available</span></div>
+        <div class="legend-item"><span class="legend-dot hold"></span><span>On Hold</span></div>
+        <div class="legend-item"><span class="legend-dot confirmed"></span><span>Confirmed</span></div>
+        <div class="legend-item"><span class="legend-dot selected"></span><span>Selected</span></div>
       </div>
     </div>
   {:else}
@@ -128,7 +124,7 @@
     padding: var(--space-4);
     border: 1px solid var(--color-border);
     box-shadow: var(--shadow-1);
-    overflow-x: auto;
+    overflow-x: hidden;
   }
 
   .show-info {
@@ -157,24 +153,22 @@
   }
 
   .seat-stats {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-4);
-    margin-bottom: var(--space-4);
-    padding: var(--space-3);
-    background-color: var(--color-surface-2);
-    border-radius: var(--radius-s);
-  }
-
-  .stat {
-    display: flex;
+    display: inline-flex;
     align-items: center;
-    gap: 6px;
-    font-size: 12px;
-    font-weight: 500;
+    justify-content: center;
+    gap: var(--space-3);
+    margin: 0 auto var(--space-4);
+    padding: 6px 10px;
+    background-color: var(--color-surface-2);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    white-space: nowrap;
+    font-size: 11px;
   }
 
-  .stat-dot { width: 10px; height: 10px; border-radius: 50%; }
+  .stat { display: inline-flex; align-items: center; gap: 6px; font-size: inherit; font-weight: 600; color: var(--color-text); }
+
+  .stat-dot { width: 8px; height: 8px; border-radius: 50%; }
 
   .stat.available .stat-dot { background-color: var(--color-success); }
 
@@ -182,15 +176,24 @@
 
   .stat.confirmed .stat-dot { background-color: var(--color-danger); }
 
-  .selection-info {
-    text-align: center;
-    background-color: var(--color-primary-50);
-    padding: var(--space-3);
-    border-radius: var(--radius-s);
-    margin-bottom: var(--space-4);
+  .selection-bar {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 6px 10px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-pill);
+    background: var(--color-primary-50);
     color: var(--color-primary-700);
-    font-weight: 500;
+    font-weight: 600;
+    font-size: 11px;
+    margin: 0 auto var(--space-3);
   }
+
+  .selection-label { display: inline-flex; align-items: center; gap: 6px; }
+  .sel-dot { width: 8px; height: 8px; background: var(--color-primary-600); display: inline-block; border-radius: 999px; }
+  .selection-chips { display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap; }
+  .chip { padding: 2px 8px; background: #fff; border: 1px solid var(--color-border); border-radius: var(--radius-pill); color: var(--color-text); font-size: 11px; }
 
   .stage-label {
     background: linear-gradient(45deg, #1f2937, #374151);
@@ -222,19 +225,29 @@
 
   .seats { display: flex; gap: 2px; }
 
-  .legend { display: flex; justify-content: center; gap: var(--space-4); flex-wrap: wrap; }
-
-  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-muted); }
-
-  .legend-seat { width: 16px; height: 16px; border-radius: 4px; border: 2px solid; }
-
-  .legend-seat.available { background-color: var(--color-success-50); border-color: var(--color-success); }
-
-  .legend-seat.hold { background-color: var(--color-warning-50); border-color: var(--color-warning); }
-
-  .legend-seat.confirmed { background-color: var(--color-danger-50); border-color: var(--color-danger); }
-
-  .legend-seat.selected { background-color: var(--color-primary-50); border-color: var(--color-primary-600); }
+  .legend-card {
+    display: block;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-s);
+    background: var(--color-surface-2);
+    padding: 6px 8px;
+    margin-top: var(--space-3);
+  }
+  .legend-items {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px 14px;
+    flex-wrap: wrap;
+    font-size: 11px;
+    color: var(--color-muted);
+  }
+  .legend-item { display: inline-flex; align-items: center; gap: 6px; }
+  .legend-dot { width: 9px; height: 9px; border-radius: 3px; border: 2px solid; }
+  .legend-dot.available { background-color: var(--color-success-50); border-color: var(--color-success); }
+  .legend-dot.hold { background-color: var(--color-warning-50); border-color: var(--color-warning); }
+  .legend-dot.confirmed { background-color: var(--color-danger-50); border-color: var(--color-danger); }
+  .legend-dot.selected { background-color: var(--color-primary-50); border-color: var(--color-primary-600); }
 
   .loading, .error, .no-data { text-align: center; padding: var(--space-6); color: var(--color-muted); font-size: 14px; }
 
