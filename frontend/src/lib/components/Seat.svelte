@@ -70,75 +70,54 @@
 
 <style>
   .seat {
-    width: 50px;
-    height: 50px;
+    width: var(--seat-size, 40px);
+    height: var(--seat-size, 40px);
     margin: 2px;
-    border: 2px solid #ddd;
+    border: 2px solid var(--color-border);
     border-radius: 8px;
     display: flex;
     flex-direction: column;
     align-items: center;
     justify-content: center;
     font-size: 10px;
-    font-weight: bold;
+    font-weight: 700;
     cursor: pointer;
-    transition: all 0.3s ease;
+    transition: transform 0.15s ease, background-color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
     position: relative;
+    background: var(--color-surface-2);
   }
 
   .seat:disabled {
     cursor: not-allowed;
   }
 
-  .seat-available {
-    background-color: #e8f5e8;
-    border-color: #4caf50;
-    color: #2e7d32;
-  }
+  .seat-available { background-color: var(--color-success-50); border-color: var(--color-success); color: #166534; }
 
-  .seat-available:hover {
-    background-color: #c8e6c9;
-    transform: scale(1.05);
-  }
+  .seat-available:hover { background-color: #dcfce7; transform: scale(1.04); }
 
-  .seat-hold {
-    background-color: #fff3e0;
-    border-color: #ff9800;
-    color: #f57c00;
-    animation: pulse 2s infinite;
-  }
+  .seat-hold { background-color: var(--color-warning-50); border-color: var(--color-warning); color: #b45309; animation: pulse 2s infinite; }
 
-  .seat-confirmed {
-    background-color: #ffebee;
-    border-color: #f44336;
-    color: #c62828;
-  }
+  .seat-confirmed { background-color: var(--color-danger-50); border-color: var(--color-danger); color: #b91c1c; }
 
   .seat.selected {
-    background-color: #e3f2fd !important;
-    border-color: #2196f3 !important;
-    color: #1565c0 !important;
-    transform: scale(1.1);
-    box-shadow: 0 4px 8px rgba(33, 150, 243, 0.3);
+    background-color: var(--color-primary-50) !important;
+    border-color: var(--color-primary-600) !important;
+    color: var(--color-primary-700) !important;
+    transform: scale(1.06);
+    box-shadow: 0 4px 10px rgba(79, 70, 229, 0.25);
   }
 
-  .seat-id {
-    font-size: 12px;
-    line-height: 1;
-  }
+  .seat-id { font-size: 11px; line-height: 1; }
 
-  .seat-price {
-    font-size: 8px;
-    line-height: 1;
-  }
+  .seat-price { font-size: 8px; line-height: 1; color: var(--color-muted); font-weight: 600; }
 
   .hold-countdown {
     position: absolute;
     top: -8px;
     right: -8px;
-    background-color: #ff9800;
+    background-color: var(--color-warning);
     color: white;
-    font-size: 8px;
+    font-size: 9px;
     padding: 2px 4px;
     border-radius: 4px;
     min-width: 20px;
@@ -158,7 +137,5 @@
     cursor: pointer;
   }
 
-  .clickable:hover {
-    transform: scale(1.05);
-  }
+  .clickable:hover { transform: scale(1.04); }
 </style>

@@ -38,37 +38,27 @@
 
 <style>
   .event-log {
-    background: white;
-    border-radius: 12px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    height: 400px;
+    background: var(--color-surface);
+    border-radius: var(--radius-m);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-1);
+    height: 280px;
     display: flex;
     flex-direction: column;
   }
 
   .log-header {
-    padding: 15px 20px;
-    border-bottom: 1px solid #eee;
+    padding: var(--space-3) var(--space-4);
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     justify-content: space-between;
     align-items: center;
     flex-shrink: 0;
   }
 
-  .log-header h3 {
-    margin: 0;
-    color: #333;
-    font-size: 18px;
-  }
+  .log-header h3 { margin: 0; color: var(--color-text); font-size: 16px; }
 
-  .log-count {
-    background: #e3f2fd;
-    color: #1565c0;
-    padding: 4px 8px;
-    border-radius: 12px;
-    font-size: 12px;
-    font-weight: 500;
-  }
+  .log-count { background: var(--color-primary-50); color: var(--color-primary-700); padding: 4px 8px; border-radius: 12px; font-size: 12px; font-weight: 600; }
 
   .log-content {
     flex: 1;
@@ -76,28 +66,22 @@
     padding: 0;
   }
 
-  .no-events {
-    padding: 40px 20px;
-    text-align: center;
-    color: #666;
-  }
+  .no-events { padding: 24px 16px; text-align: center; color: var(--color-muted); }
 
   .no-events p {
     margin: 0;
     font-style: italic;
   }
 
-  .events {
-    padding: 10px 0;
-  }
+  .events { padding: 6px 0; }
 
   .event {
-    padding: 8px 20px;
-    border-bottom: 1px solid #f5f5f5;
+    padding: 8px 16px;
+    border-bottom: 1px solid var(--color-border);
     font-family: 'Consolas', 'Monaco', 'Courier New', monospace;
-    font-size: 13px;
+    font-size: 12px;
     line-height: 1.4;
-    color: #333;
+    color: var(--color-text);
     transition: background-color 0.3s ease;
   }
 
@@ -105,23 +89,11 @@
     border-bottom: none;
   }
 
-  .event.recent {
-    background-color: #f8f9fa;
-    animation: highlight 1s ease-out;
-  }
+  .event.recent { background-color: var(--color-surface-2); animation: highlight 1s ease-out; }
 
-  .event:hover {
-    background-color: #f0f0f0;
-  }
+  .event:hover { background-color: #f3f4f6; }
 
-  @keyframes highlight {
-    from {
-      background-color: #e8f5e8;
-    }
-    to {
-      background-color: #f8f9fa;
-    }
-  }
+  @keyframes highlight { from { background-color: var(--color-primary-50); } to { background-color: var(--color-surface-2); } }
 
   /* Custom scrollbar */
   .log-content::-webkit-scrollbar {

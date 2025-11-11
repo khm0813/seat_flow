@@ -1,0 +1,53 @@
+/* Global layout inside phone screen */
+.screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.screen-header {
+  padding: var(--space-4);
+  border-bottom: 1px solid var(--color-border);
+  background: linear-gradient(180deg, var(--color-surface), var(--color-surface-2));
+}
+
+.screen-title {
+  margin: 0;
+  font-size: 20px;
+}
+
+.screen-subtitle { margin: 4px 0 0; }
+
+.screen-content {
+  flex: 1;
+  padding: var(--space-4);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-4);
+  overflow-y: auto;
+  padding-bottom: calc(var(--space-8) + env(safe-area-inset-bottom));
+}
+
+.section {
+  padding: var(--space-4);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-m);
+  background: var(--color-surface);
+}
+
+.row { display: flex; align-items: center; gap: var(--space-3); }
+.row.center { justify-content: center; }
+.row.between { justify-content: space-between; }
+.chips { display: flex; gap: 10px; flex-wrap: wrap; }
+.chip {
+  display: inline-flex; align-items: center; gap: 6px;
+  padding: 6px 10px;
+  border-radius: var(--radius-pill);
+  border: 1px solid var(--color-border);
+  background: var(--color-surface-2);
+  font-size: 12px; color: var(--color-muted);
+}
+
+/* Seat map layout helpers */
+.stage-wrap { display: grid; place-items: center; }
+.legend-wrap { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }

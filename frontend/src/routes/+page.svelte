@@ -1,35 +1,30 @@
 <script lang="ts">
   import { onMount, onDestroy } from 'svelte';
   import SeatMap from '$lib/components/SeatMap.svelte';
-  import ScenarioPanel from '$lib/components/ScenarioPanel.svelte';
   import EventLog from '$lib/components/EventLog.svelte';
   import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
-  import { seatStore } from '$lib/stores/seatStore';
+  import { seatStore, selectedSeats } from '$lib/stores/seatStore';
   import { apiClient } from '$lib/api';
   import { webSocketClient } from '$lib/websocket';
 
   const SHOW_ID = 1; // Demo show ID
+  let lastReservationId: number | null = null;
+  const currentUser = 'guest';
 
   onMount(async () => {
-    // Load initial seat data for show ID 1 (demo show)
     await loadShowSeats();
-
-    // Connect to WebSocket for real-time updates
     webSocketClient.connect(SHOW_ID);
   });
 
   onDestroy(() => {
-    // Disconnect WebSocket when component is destroyed
     webSocketClient.disconnect();
   });
 
   async function loadShowSeats() {
     seatStore.setLoading(true);
     seatStore.addEventLog('Loading show seats...');
-
     try {
       const response = await apiClient.getShowSeats(SHOW_ID);
-
       if (response.success && response.data) {
         seatStore.setShowData(response.data);
         seatStore.addEventLog(`Loaded ${response.data.seats.length} seats for "${response.data.showTitle}"`);
@@ -49,167 +44,81 @@
   async function refreshSeats() {
     await loadShowSeats();
   }
+
+  function generateIdempotencyKey(): string {
+    return `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+  }
+
+  async function holdSelectedSeat() {
+    if ($selectedSeats.length === 0) return;
+    const seatId = $selectedSeats[0];
+    const key = generateIdempotencyKey();
+    seatStore.addEventLog(`[${currentUser}] Requesting hold for seat ${seatId}...`);
+    try {
+      const res = await apiClient.holdSeat(SHOW_ID, seatId, currentUser, key);
+      if (res.success && res.data) {
+        lastReservationId = res.data.reservationId;
+        seatStore.addEventLog(`✅ Held seat ${seatId} (Reservation #${lastReservationId})`);
+        seatStore.clearSelection();
+      } else {
+        seatStore.addEventLog(`❌ Hold failed: ${res.error}`);
+      }
+    } catch (e) {
+      seatStore.addEventLog(`❌ Error: ${e}`);
+    }
+  }
+
+  async function confirmReservation() {
+    if (!lastReservationId) return;
+    const key = generateIdempotencyKey();
+    seatStore.addEventLog(`Confirming reservation #${lastReservationId}...`);
+    const res = await apiClient.confirmReservation(lastReservationId, key);
+    if (res.success) {
+      seatStore.addEventLog(`✅ Reservation #${lastReservationId} confirmed`);
+      lastReservationId = null;
+    } else {
+      seatStore.addEventLog(`❌ Confirm failed: ${res.error}`);
+    }
+  }
 </script>
 
 <svelte:head>
-  <title>SeatFlow - Real-time Seat Reservation System</title>
-  <meta name="description" content="Demo of a real-time, high-concurrency seat reservation system" />
+  <title>SeatFlow - Real-time Seat Reservation</title>
+  <meta name="description" content="Modern mobile-like seat reservation UI" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 </svelte:head>
 
-<div class="app">
-  <header class="app-header">
-    <h1>🎭 SeatFlow</h1>
-    <p>Real-time Seat Reservation System Demo</p>
-    <div class="header-controls">
+<div class="screen">
+  <header class="toolbar">
+    <div class="row" style="gap:10px">
+      <span aria-hidden>🎭</span>
+      <strong>SeatFlow</strong>
+    </div>
+    <div class="row" style="gap:10px">
       <ConnectionStatus />
-      <button class="refresh-btn" on:click={refreshSeats}>
-        🔄 Refresh Seats
-      </button>
+      <button class="btn btn-ghost" on:click={refreshSeats} title="Refresh seats">🔄</button>
     </div>
   </header>
 
-  <main class="app-main">
-    <div class="left-panel">
-      <ScenarioPanel />
-    </div>
+  <div class="screen-content">
+    <SeatMap />
+    <EventLog />
+  </div>
 
-    <div class="right-panel">
-      <div class="seat-map-section">
-        <SeatMap />
-      </div>
-
-      <div class="event-log-section">
-        <EventLog />
-      </div>
-    </div>
-  </main>
+  <div class="bottom-bar">
+    {#if $selectedSeats.length > 0}
+      <button class="btn btn-primary" style="flex:1" on:click={holdSelectedSeat}>
+        Reserve Selected Seat
+      </button>
+    {/if}
+    {#if lastReservationId}
+      <button class="btn btn-success" style="flex:1" on:click={confirmReservation}>
+        Confirm Reservation
+      </button>
+    {/if}
+  </div>
 </div>
 
 <style>
-  :global(body) {
-    margin: 0;
-    padding: 0;
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    min-height: 100vh;
-  }
-
-  :global(*) {
-    box-sizing: border-box;
-  }
-
-  .app {
-    min-height: 100vh;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .app-header {
-    background: rgba(255, 255, 255, 0.95);
-    backdrop-filter: blur(10px);
-    padding: 20px;
-    text-align: center;
-    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-    position: sticky;
-    top: 0;
-    z-index: 100;
-  }
-
-  .app-header h1 {
-    margin: 0 0 10px 0;
-    font-size: 32px;
-    background: linear-gradient(135deg, #667eea, #764ba2);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-    background-clip: text;
-  }
-
-  .app-header p {
-    margin: 0 0 15px 0;
-    color: #666;
-    font-size: 16px;
-  }
-
-  .header-controls {
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    justify-content: center;
-  }
-
-  .refresh-btn {
-    background: #4caf50;
-    color: white;
-    border: none;
-    padding: 10px 20px;
-    border-radius: 25px;
-    cursor: pointer;
-    font-size: 14px;
-    font-weight: 500;
-    transition: all 0.2s;
-    box-shadow: 0 2px 5px rgba(76, 175, 80, 0.3);
-  }
-
-  .refresh-btn:hover {
-    background: #45a049;
-    transform: translateY(-1px);
-    box-shadow: 0 4px 10px rgba(76, 175, 80, 0.4);
-  }
-
-  .app-main {
-    flex: 1;
-    display: grid;
-    grid-template-columns: 1fr 2fr;
-    gap: 20px;
-    padding: 20px;
-    max-width: 1400px;
-    margin: 0 auto;
-    width: 100%;
-  }
-
-  .left-panel {
-    display: flex;
-    flex-direction: column;
-  }
-
-  .right-panel {
-    display: flex;
-    flex-direction: column;
-    gap: 20px;
-  }
-
-  .seat-map-section {
-    flex: 1;
-  }
-
-  .event-log-section {
-    flex-shrink: 0;
-  }
-
-  @media (max-width: 1024px) {
-    .app-main {
-      grid-template-columns: 1fr;
-      gap: 15px;
-      padding: 15px;
-    }
-
-    .right-panel {
-      order: -1;
-    }
-  }
-
-  @media (max-width: 768px) {
-    .app-header {
-      padding: 15px;
-    }
-
-    .app-header h1 {
-      font-size: 24px;
-    }
-
-    .app-main {
-      padding: 10px;
-      gap: 10px;
-    }
-  }
+  /* Page uses global tokens and utilities. */
 </style>

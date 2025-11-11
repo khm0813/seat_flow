@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from 'svelte';
   import Seat from './Seat.svelte';
   import { seatsByRow, selectedSeats, showData, loading, error } from '$lib/stores/seatStore';
   import { SeatStatus } from '$lib/types';
@@ -10,9 +11,43 @@
     Array.from($seatsByRow.values()).flat().filter(seat => seat.status === SeatStatus.HOLD).length : 0;
   $: confirmedSeats = $seatsByRow.size > 0 ?
     Array.from($seatsByRow.values()).flat().filter(seat => seat.status === SeatStatus.CONFIRMED).length : 0;
+
+  // Responsive seat sizing to keep rows within container
+  let container: HTMLDivElement;
+  let seatSize = 40; // default max size
+  const minSeatSize = 26;
+  const seatGap = 2; // matches CSS
+  const rowLabelWidth = 24; // matches CSS
+
+  $: maxSeatsPerRow = Math.max(
+    0,
+    ...Array.from($seatsByRow.values()).map((row) => row.length)
+  );
+
+  function recalcSeatSize() {
+    if (!container || maxSeatsPerRow === 0) return;
+    const rect = container.getBoundingClientRect();
+    const style = window.getComputedStyle(container);
+    const pl = parseFloat(style.paddingLeft || '0');
+    const pr = parseFloat(style.paddingRight || '0');
+    const innerWidth = rect.width - pl - pr;
+    const labelsSpace = rowLabelWidth * 2 + 8; // both sides + gap
+    const available = innerWidth - labelsSpace;
+    const totalGap = (maxSeatsPerRow - 1) * seatGap;
+    const size = Math.floor((available - totalGap) / maxSeatsPerRow);
+    seatSize = Math.max(minSeatSize, Math.min(40, size));
+  }
+
+  let resizeObs: ResizeObserver;
+  onMount(() => {
+    recalcSeatSize();
+    resizeObs = new ResizeObserver(() => recalcSeatSize());
+    if (container) resizeObs.observe(container);
+  });
+  onDestroy(() => { if (resizeObs && container) resizeObs.disconnect(); });
 </script>
 
-<div class="seat-map-container">
+<div class="seat-map-container" bind:this={container} style={`--seat-size:${seatSize}px`}>
   {#if $loading}
     <div class="loading">Loading seat map...</div>
   {:else if $error}
@@ -45,7 +80,7 @@
       </div>
     {/if}
 
-    <div class="stage">
+    <div class="stage-wrap">
       <div class="stage-label">STAGE</div>
     </div>
 
@@ -88,178 +123,120 @@
 
 <style>
   .seat-map-container {
-    background: white;
-    border-radius: 12px;
-    padding: 20px;
-    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-    min-height: 500px;
+    background: var(--color-surface);
+    border-radius: var(--radius-m);
+    padding: var(--space-4);
+    border: 1px solid var(--color-border);
+    box-shadow: var(--shadow-1);
+    overflow-x: auto;
   }
 
   .show-info {
     text-align: center;
-    margin-bottom: 20px;
-    padding-bottom: 15px;
-    border-bottom: 1px solid #eee;
+    margin-bottom: var(--space-4);
+    padding-bottom: var(--space-3);
+    border-bottom: 1px solid var(--color-border);
   }
 
   .show-info h2 {
-    margin: 0 0 10px 0;
-    color: #333;
-    font-size: 24px;
+    margin: 0 0 var(--space-2) 0;
+    color: var(--color-text);
+    font-size: 18px;
   }
 
   .venue {
-    color: #666;
-    margin: 5px 0;
+    color: var(--color-muted);
+    margin: 4px 0;
     font-weight: 500;
   }
 
   .show-date {
-    color: #888;
-    margin: 5px 0;
-    font-size: 14px;
+    color: var(--color-muted);
+    margin: 4px 0;
+    font-size: 12px;
   }
 
   .seat-stats {
     display: flex;
     justify-content: center;
-    gap: 20px;
-    margin-bottom: 20px;
-    padding: 10px;
-    background-color: #f8f9fa;
-    border-radius: 8px;
+    gap: var(--space-4);
+    margin-bottom: var(--space-4);
+    padding: var(--space-3);
+    background-color: var(--color-surface-2);
+    border-radius: var(--radius-s);
   }
 
   .stat {
     display: flex;
     align-items: center;
-    gap: 5px;
-    font-size: 14px;
+    gap: 6px;
+    font-size: 12px;
     font-weight: 500;
   }
 
-  .stat-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-  }
+  .stat-dot { width: 10px; height: 10px; border-radius: 50%; }
 
-  .stat.available .stat-dot {
-    background-color: #4caf50;
-  }
+  .stat.available .stat-dot { background-color: var(--color-success); }
 
-  .stat.hold .stat-dot {
-    background-color: #ff9800;
-  }
+  .stat.hold .stat-dot { background-color: var(--color-warning); }
 
-  .stat.confirmed .stat-dot {
-    background-color: #f44336;
-  }
+  .stat.confirmed .stat-dot { background-color: var(--color-danger); }
 
   .selection-info {
     text-align: center;
-    background-color: #e3f2fd;
-    padding: 10px;
-    border-radius: 8px;
-    margin-bottom: 20px;
-    color: #1565c0;
+    background-color: var(--color-primary-50);
+    padding: var(--space-3);
+    border-radius: var(--radius-s);
+    margin-bottom: var(--space-4);
+    color: var(--color-primary-700);
     font-weight: 500;
   }
 
-  .stage {
-    text-align: center;
-    margin-bottom: 30px;
-  }
-
   .stage-label {
-    background: linear-gradient(45deg, #333, #666);
+    background: linear-gradient(45deg, #1f2937, #374151);
     color: white;
-    padding: 10px 40px;
-    border-radius: 25px;
-    font-weight: bold;
+    padding: 8px 28px;
+    border-radius: var(--radius-pill);
+    font-weight: 700;
     display: inline-block;
-    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--shadow-1);
+    margin-bottom: var(--space-3);
   }
 
   .seat-map {
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: 5px;
-    margin-bottom: 30px;
+    gap: 4px;
   }
 
-  .seat-row {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-  }
+  .seat-row { display: flex; align-items: center; gap: 8px; }
 
   .row-label {
-    width: 30px;
+    width: 24px;
     text-align: center;
-    font-weight: bold;
-    color: #666;
-    font-size: 14px;
+    font-weight: 700;
+    color: var(--color-muted);
+    font-size: 12px;
   }
 
-  .seats {
-    display: flex;
-    gap: 2px;
-  }
+  .seats { display: flex; gap: 2px; }
 
-  .legend {
-    display: flex;
-    justify-content: center;
-    gap: 20px;
-    flex-wrap: wrap;
-  }
+  .legend { display: flex; justify-content: center; gap: var(--space-4); flex-wrap: wrap; }
 
-  .legend-item {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    font-size: 14px;
-    color: #666;
-  }
+  .legend-item { display: flex; align-items: center; gap: 8px; font-size: 12px; color: var(--color-muted); }
 
-  .legend-seat {
-    width: 20px;
-    height: 20px;
-    border-radius: 4px;
-    border: 2px solid;
-  }
+  .legend-seat { width: 16px; height: 16px; border-radius: 4px; border: 2px solid; }
 
-  .legend-seat.available {
-    background-color: #e8f5e8;
-    border-color: #4caf50;
-  }
+  .legend-seat.available { background-color: var(--color-success-50); border-color: var(--color-success); }
 
-  .legend-seat.hold {
-    background-color: #fff3e0;
-    border-color: #ff9800;
-  }
+  .legend-seat.hold { background-color: var(--color-warning-50); border-color: var(--color-warning); }
 
-  .legend-seat.confirmed {
-    background-color: #ffebee;
-    border-color: #f44336;
-  }
+  .legend-seat.confirmed { background-color: var(--color-danger-50); border-color: var(--color-danger); }
 
-  .legend-seat.selected {
-    background-color: #e3f2fd;
-    border-color: #2196f3;
-  }
+  .legend-seat.selected { background-color: var(--color-primary-50); border-color: var(--color-primary-600); }
 
-  .loading, .error, .no-data {
-    text-align: center;
-    padding: 40px;
-    color: #666;
-    font-size: 16px;
-  }
+  .loading, .error, .no-data { text-align: center; padding: var(--space-6); color: var(--color-muted); font-size: 14px; }
 
-  .error {
-    color: #d32f2f;
-    background-color: #ffebee;
-    border-radius: 8px;
-  }
+  .error { color: var(--color-danger); background-color: var(--color-danger-50); border-radius: var(--radius-s); }
 </style>

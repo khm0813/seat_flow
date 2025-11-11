@@ -59,38 +59,21 @@
   .connection-status {
     display: inline-flex;
     align-items: center;
-    padding: 6px 12px;
+    padding: 6px 10px;
     border-radius: 20px;
     font-size: 12px;
-    font-weight: 500;
+    font-weight: 600;
     transition: all 0.3s ease;
     border: 1px solid;
   }
 
-  .status-connected {
-    background-color: #e8f5e8;
-    border-color: #4caf50;
-    color: #2e7d32;
-  }
+  .status-connected { background-color: var(--color-success-50); border-color: var(--color-success); color: #166534; }
 
-  .status-connecting {
-    background-color: #fff8e1;
-    border-color: #ff9800;
-    color: #f57c00;
-    animation: pulse 2s infinite;
-  }
+  .status-connecting { background-color: var(--color-warning-50); border-color: var(--color-warning); color: #b45309; animation: pulse 2s infinite; }
 
-  .status-disconnected {
-    background-color: #ffebee;
-    border-color: #f44336;
-    color: #c62828;
-  }
+  .status-disconnected { background-color: var(--color-danger-50); border-color: var(--color-danger); color: #b91c1c; }
 
-  .status-unknown {
-    background-color: #f5f5f5;
-    border-color: #9e9e9e;
-    color: #616161;
-  }
+  .status-unknown { background-color: #f5f5f5; border-color: #9e9e9e; color: #616161; }
 
   .status-text {
     line-height: 1;
