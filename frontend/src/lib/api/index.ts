@@ -53,6 +53,12 @@ class ApiClient {
       }
     });
   }
+
+  async cancelHold(reservationId: number, userId: string): Promise<ApiResponse<void>> {
+    return this.request<void>(`/reservations/${reservationId}?userId=${encodeURIComponent(userId)}`, {
+      method: 'DELETE'
+    });
+  }
 }
 
 export const apiClient = new ApiClient();

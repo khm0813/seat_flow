@@ -16,7 +16,7 @@ class RedisLockManager(
 
     companion object {
         private const val LOCK_PREFIX = "lock:seat:"
-        private const val DEFAULT_LOCK_TTL_SECONDS = 300L // 5 minutes
+        private const val DEFAULT_LOCK_TTL_SECONDS = 60L // 1 minute
 
         // Lua script for atomic lock release with fencing token verification
         private val RELEASE_LOCK_SCRIPT = """

@@ -3,7 +3,7 @@
   import SeatMap from '$lib/components/SeatMap.svelte';
   import EventLog from '$lib/components/EventLog.svelte';
   import ConnectionStatus from '$lib/components/ConnectionStatus.svelte';
-  import { seatStore, selectedSeats } from '$lib/stores/seatStore';
+  import { seatStore, selectedSeats, currentReservation } from '$lib/stores/seatStore';
   import { apiClient } from '$lib/api';
   import { webSocketClient } from '$lib/websocket';
 
@@ -52,13 +52,43 @@
   async function holdSelectedSeat() {
     if ($selectedSeats.length === 0) return;
     const seatId = $selectedSeats[0];
+
+    // Cancel existing hold if clicking a different seat
+    if ($currentReservation && $currentReservation.seatId !== seatId) {
+      seatStore.addEventLog(`[${currentUser}] Cancelling previous hold on seat ${$currentReservation.seatId}...`);
+      try {
+        const cancelRes = await apiClient.cancelHold($currentReservation.reservationId, currentUser);
+        if (cancelRes.success) {
+          seatStore.addEventLog(`✅ Cancelled hold on seat ${$currentReservation.seatId}`);
+          seatStore.setCurrentReservation(null);
+          lastReservationId = null;
+        } else {
+          seatStore.addEventLog(`⚠️ Cancel failed: ${cancelRes.error}`);
+        }
+      } catch (e) {
+        seatStore.addEventLog(`⚠️ Cancel error: ${e}`);
+      }
+    }
+
     const key = generateIdempotencyKey();
     seatStore.addEventLog(`[${currentUser}] Requesting hold for seat ${seatId}...`);
     try {
       const res = await apiClient.holdSeat(SHOW_ID, seatId, currentUser, key);
+      console.log('[holdSelectedSeat] API response:', res);
       if (res.success && res.data) {
         lastReservationId = res.data.reservationId;
         seatStore.addEventLog(`✅ Held seat ${seatId} (Reservation #${lastReservationId})`);
+
+        // Store current reservation for countdown and auto-cancel
+        const reservation = {
+          reservationId: res.data.reservationId,
+          seatId: res.data.seatId,
+          userId: currentUser,
+          holdExpiresAt: res.data.holdExpiresAt
+        };
+        console.log('[holdSelectedSeat] Setting currentReservation:', reservation);
+        seatStore.setCurrentReservation(reservation);
+
         seatStore.clearSelection();
       } else {
         seatStore.addEventLog(`❌ Hold failed: ${res.error}`);
@@ -76,6 +106,7 @@
     if (res.success) {
       seatStore.addEventLog(`✅ Reservation #${lastReservationId} confirmed`);
       lastReservationId = null;
+      seatStore.setCurrentReservation(null);
     } else {
       seatStore.addEventLog(`❌ Confirm failed: ${res.error}`);
     }

@@ -19,7 +19,10 @@ import org.springframework.dao.DataIntegrityViolationException
 import org.springframework.stereotype.Service
 import org.springframework.transaction.annotation.Transactional
 import reactor.core.publisher.Mono
+import java.time.Instant
 import java.time.LocalDateTime
+import java.time.ZoneOffset
+import java.time.temporal.ChronoUnit
 import kotlin.jvm.optionals.getOrNull
 
 @Service
@@ -34,7 +37,7 @@ class ReservationService(
     private val logger = KotlinLogging.logger {}
 
     companion object {
-        private const val HOLD_DURATION_MINUTES = 10L
+        private const val HOLD_DURATION_MINUTES = 1L
     }
 
     fun holdSeat(request: HoldSeatRequest, idempotencyKey: String): Mono<HoldSeatResponse> {
@@ -124,7 +127,7 @@ class ReservationService(
                 if (seatInventory.status != SeatStatus.AVAILABLE) {
                     Mono.error(IllegalStateException("Seat ${request.seatId} is not available (current status: ${seatInventory.status})"))
                 } else {
-                    val holdExpiresAt = LocalDateTime.now().plusMinutes(HOLD_DURATION_MINUTES)
+                    val holdExpiresAt = LocalDateTime.now(ZoneOffset.UTC).plusMinutes(HOLD_DURATION_MINUTES)
 
                     val reservation = Reservation(
                         showId = request.showId,
@@ -239,7 +242,7 @@ class ReservationService(
                     reservation.status != ReservationStatus.HOLD -> {
                         Mono.error(IllegalStateException("Reservation $reservationId cannot be confirmed (current status: ${reservation.status})"))
                     }
-                    reservation.holdExpiresAt?.isBefore(LocalDateTime.now()) == true -> {
+                    reservation.holdExpiresAt?.isBefore(LocalDateTime.now(ZoneOffset.UTC)) == true -> {
                         Mono.error(IllegalStateException("Reservation $reservationId has expired"))
                     }
                     else -> {
@@ -293,6 +296,47 @@ class ReservationService(
                 val responseJson = objectMapper.writeValueAsString(response)
                 idempotencyService.checkAndSetIdempotencyKey(idempotencyKey, responseJson)
                     .then(Mono.just(response))
+            }
+    }
+
+    @Transactional
+    fun cancelHold(reservationId: Long, userId: String): Mono<Void> {
+        logger.info { "Attempting to cancel hold for reservation $reservationId by user $userId" }
+
+        return reservationRepository.findById(reservationId)
+            .switchIfEmpty(Mono.error(NoSuchElementException("Reservation $reservationId not found")))
+            .flatMap { reservation ->
+                when {
+                    reservation.userId != userId -> {
+                        Mono.error(IllegalStateException("User $userId is not authorized to cancel this reservation"))
+                    }
+                    reservation.status != ReservationStatus.HOLD -> {
+                        Mono.error(IllegalStateException("Reservation $reservationId cannot be cancelled (current status: ${reservation.status})"))
+                    }
+                    else -> {
+                        // Update reservation status to CANCELLED
+                        reservationRepository.updateStatus(reservationId, ReservationStatus.CANCELLED)
+                            .then(
+                                seatInventoryRepository.findById(reservation.seatInventoryId)
+                                    .flatMap { seatInventory ->
+                                        seatInventoryRepository.updateSeatStatus(
+                                            reservation.showId,
+                                            seatInventory.seatId,
+                                            SeatStatus.AVAILABLE
+                                        ).then(
+                                            // Publish seat status change
+                                            seatStatusPublisher.publishSeatStatusChange(
+                                                showId = reservation.showId,
+                                                seatId = seatInventory.seatId,
+                                                status = SeatStatus.AVAILABLE,
+                                                userId = userId
+                                            )
+                                        )
+                                    }
+                            )
+                            .then()
+                    }
+                }
             }
     }
 }

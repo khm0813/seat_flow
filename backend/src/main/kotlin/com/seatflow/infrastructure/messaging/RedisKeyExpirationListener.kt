@@ -15,12 +15,11 @@ import jakarta.annotation.PreDestroy
 
 @Component
 class RedisKeyExpirationListener(
-    private val redisConnectionFactory: ReactiveRedisConnectionFactory,
+    private val listenerContainer: ReactiveRedisMessageListenerContainer,
     private val seatInventoryRepository: SeatInventoryRepository,
     private val seatStatusPublisher: SeatStatusPublisher
 ) {
     private val logger = KotlinLogging.logger {}
-    private lateinit var listenerContainer: ReactiveRedisMessageListenerContainer
     private var subscription: Disposable? = null
 
     companion object {
@@ -30,31 +29,48 @@ class RedisKeyExpirationListener(
 
     @PostConstruct
     fun initialize() {
-        listenerContainer = ReactiveRedisMessageListenerContainer(redisConnectionFactory)
+        logger.info { "Initializing Redis key expiration listener..." }
 
         // Listen for key expiration events
-        val messages = listenerContainer.receive(EXPIRATION_PATTERN)
-
-        subscription = messages
+        subscription = listenerContainer.receive(EXPIRATION_PATTERN)
+            .doOnSubscribe {
+                logger.info { "Subscribed to Redis expiration events on pattern: ${EXPIRATION_PATTERN.getTopic()}" }
+            }
+            .doOnNext { message ->
+                logger.info { "Received Redis expiration event: channel=${message.channel}, key=${message.message}" }
+            }
             .filter { message ->
                 val key = message.message
-                key.startsWith(LOCK_PREFIX)
+                val isLockKey = key.startsWith(LOCK_PREFIX)
+                if (isLockKey) {
+                    logger.info { "Matched lock key pattern: $key" }
+                } else {
+                    logger.debug { "Ignoring non-lock key: $key" }
+                }
+                isLockKey
             }
             .flatMap { message ->
                 val expiredKey = message.message
+                logger.info { "Processing expired lock key: $expiredKey" }
                 handleLockExpiration(expiredKey)
-                    .onErrorContinue { error, _ ->
+                    .doOnError { error ->
                         logger.error(error) { "Error handling lock expiration for key: $expiredKey" }
                     }
+                    .onErrorResume { Mono.empty() }
             }
-            .subscribe()
+            .subscribe(
+                { logger.debug { "Successfully processed expiration event" } },
+                { error -> logger.error(error) { "Fatal error in expiration subscription - subscription terminated!" } },
+                { logger.warn { "Expiration subscription completed unexpectedly" } }
+            )
 
-        logger.info { "Redis key expiration listener started" }
+        logger.info { "Redis key expiration listener initialized. Subscription active: ${!subscription!!.isDisposed}" }
     }
 
     @PreDestroy
     fun destroy() {
         subscription?.dispose()
+        listenerContainer.destroy()
         logger.info { "Redis key expiration listener stopped" }
     }
 

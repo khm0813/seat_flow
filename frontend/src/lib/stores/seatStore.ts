@@ -1,6 +1,13 @@
 import { writable, derived } from 'svelte/store';
 import type { Seat, ShowSeatsResponse, SeatStatus } from '$lib/types';
 
+interface CurrentReservation {
+  reservationId: number;
+  seatId: string;
+  userId: string;
+  holdExpiresAt: string;
+}
+
 interface SeatStoreState {
   showData: ShowSeatsResponse | null;
   seats: Seat[];
@@ -8,6 +15,7 @@ interface SeatStoreState {
   loading: boolean;
   error: string | null;
   eventLog: string[];
+  currentReservation: CurrentReservation | null;
 }
 
 const initialState: SeatStoreState = {
@@ -16,7 +24,8 @@ const initialState: SeatStoreState = {
   selectedSeats: [],
   loading: false,
   error: null,
-  eventLog: []
+  eventLog: [],
+  currentReservation: null
 };
 
 function createSeatStore() {
@@ -67,6 +76,11 @@ function createSeatStore() {
       ]
     })),
 
+    setCurrentReservation: (reservation: CurrentReservation | null) => update(state => ({
+      ...state,
+      currentReservation: reservation
+    })),
+
     reset: () => set(initialState)
   };
 }
@@ -80,6 +94,7 @@ export const selectedSeats = derived(seatStore, $store => $store.selectedSeats);
 export const loading = derived(seatStore, $store => $store.loading);
 export const error = derived(seatStore, $store => $store.error);
 export const eventLog = derived(seatStore, $store => $store.eventLog);
+export const currentReservation = derived(seatStore, $store => $store.currentReservation);
 
 // Helper derived stores
 export const seatsByRow = derived(seats, $seats => {

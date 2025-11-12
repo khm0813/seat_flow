@@ -65,4 +65,24 @@ class ReservationController(
                 Mono.just(response)
             }
     }
+
+    @DeleteMapping("/{reservationId}")
+    fun cancelHold(
+        @PathVariable reservationId: Long,
+        @RequestParam userId: String
+    ): Mono<ApiResponse<Unit>> {
+        logger.info { "Received cancel hold request: reservationId=$reservationId from user $userId" }
+
+        return reservationService.cancelHold(reservationId, userId)
+            .then(Mono.just(ApiResponse.success(Unit)))
+            .onErrorResume { error ->
+                logger.error(error as Throwable) { "Failed to cancel hold for reservation $reservationId" }
+                val response: ApiResponse<Unit> = when (error) {
+                    is NoSuchElementException -> ApiResponse.error("Reservation not found")
+                    is IllegalStateException -> ApiResponse.error(error.message ?: "Cannot cancel reservation")
+                    else -> ApiResponse.error("Internal server error")
+                }
+                Mono.just(response)
+            }
+    }
 }

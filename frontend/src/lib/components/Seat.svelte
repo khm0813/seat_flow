@@ -1,12 +1,17 @@
 <script lang="ts">
+  import { onDestroy } from 'svelte';
   import { SeatStatus, type Seat } from '$lib/types';
-  import { selectedSeats, seatStore } from '$lib/stores/seatStore';
+  import { selectedSeats, seatStore, currentReservation } from '$lib/stores/seatStore';
 
   export let seat: Seat;
   export let isSelected: boolean = false;
 
   $: statusClass = getSeatStatusClass(seat.status);
   $: isClickable = seat.status === SeatStatus.AVAILABLE;
+  $: isMyHold = seat.status === SeatStatus.HOLD && $currentReservation?.seatId === seat.seatId;
+  $: if (seat.status === SeatStatus.HOLD) {
+    console.log(`[Seat ${seat.seatId}] isMyHold: ${isMyHold}, currentReservation:`, $currentReservation);
+  }
 
   function getSeatStatusClass(status: SeatStatus): string {
     switch (status) {
@@ -31,7 +36,9 @@
   function getHoldTimeRemaining(): string {
     if (seat.status !== SeatStatus.HOLD || !seat.holdExpiresAt) return '';
 
-    const expiresAt = new Date(seat.holdExpiresAt);
+    // Add 'Z' suffix if not present to ensure UTC parsing
+    const holdExpiresAtUTC = seat.holdExpiresAt.endsWith('Z') ? seat.holdExpiresAt : seat.holdExpiresAt + 'Z';
+    const expiresAt = new Date(holdExpiresAtUTC);
     const now = new Date();
     const timeRemaining = Math.max(0, Math.floor((expiresAt.getTime() - now.getTime()) / 1000));
 
@@ -42,28 +49,61 @@
     return `${minutes}:${seconds.toString().padStart(2, '0')}`;
   }
 
-  // Update hold countdown every second
+  // Update hold countdown every second (only for my holds)
   let holdCountdown = '';
-  $: if (seat.status === SeatStatus.HOLD) {
-    const interval = setInterval(() => {
-      holdCountdown = getHoldTimeRemaining();
-      if (holdCountdown === 'Expired') {
-        clearInterval(interval);
+  let countdownInterval: NodeJS.Timeout | null = null;
+
+  $: {
+    if (isMyHold) {
+      // Clear any existing interval
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
       }
-    }, 1000);
+
+      // Set initial countdown value
+      holdCountdown = getHoldTimeRemaining();
+      console.log(`[Seat ${seat.seatId}] Starting countdown: ${holdCountdown}, holdExpiresAt: ${seat.holdExpiresAt}`);
+
+      // Start new interval
+      countdownInterval = setInterval(() => {
+        holdCountdown = getHoldTimeRemaining();
+        if (holdCountdown === 'Expired') {
+          console.log(`[Seat ${seat.seatId}] Hold expired`);
+          if (countdownInterval) {
+            clearInterval(countdownInterval);
+            countdownInterval = null;
+          }
+          seatStore.setCurrentReservation(null);
+        }
+      }, 1000);
+    } else {
+      // Clear interval when not my hold
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      holdCountdown = '';
+    }
   }
+
+  onDestroy(() => {
+    if (countdownInterval) {
+      clearInterval(countdownInterval);
+    }
+  });
 </script>
 
 <button
   class="seat {statusClass} {isSelected ? 'selected' : ''}"
   class:clickable={isClickable}
+  class:my-hold={isMyHold}
   disabled={!isClickable}
   on:click={handleSeatClick}
   title="{seat.seatId} - ${seat.price} - {seat.status}"
 >
   <span class="seat-id">{seat.seatId}</span>
   <span class="seat-price">${seat.price}</span>
-  {#if seat.status === SeatStatus.HOLD && holdCountdown}
+  {#if isMyHold && holdCountdown}
     <span class="hold-countdown">{holdCountdown}</span>
   {/if}
 </button>
@@ -98,6 +138,11 @@
   .seat-hold { background-color: var(--color-warning-50); border-color: var(--color-warning); color: #b45309; animation: pulse 2s infinite; }
 
   .seat-confirmed { background-color: var(--color-danger-50); border-color: var(--color-danger); color: #b91c1c; }
+
+  .seat.my-hold {
+    border-width: 3px;
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.3);
+  }
 
   .seat.selected {
     background-color: var(--color-primary-50) !important;
